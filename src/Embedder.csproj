@@ -12,7 +12,6 @@
     <OptimizationPreference>Size</OptimizationPreference>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimmerRemoveSymbols>true</TrimmerRemoveSymbols>
-    <RootNamespace>Embeder</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
