@@ -53,7 +53,7 @@ jobs:
 
       - name: Build for Windows
         run: |
-          bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-messages -Os --verbose --separate-symbols --os windows src/Program.cs
+          bflat build -o embedder.exe --no-stacktrace-data --no-globalization --no-exception-messages -Os --verbose --separate-symbols --os windows src/Program.cs
           zip embedder-windows.zip embedder.exe
 
       - name: Install UPX
