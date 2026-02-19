@@ -47,13 +47,13 @@ jobs:
 
       - name: Build for Linux
         run: |
-          bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os linux Embedder/src/Program.cs
+          bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os linux src/Program.cs
           chmod +x embedder
           tar -czf embedder-linux.tar.gz embedder
 
       - name: Build for Windows
         run: |
-          bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os windows Embedder/src/Program.cs
+          bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os windows src/Program.cs
           zip embedder-windows.zip embedder.exe
 
       - name: Install UPX
