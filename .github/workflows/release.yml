@@ -33,8 +33,10 @@ jobs:
       - name: Download bflat
         run: |
           curl -L https://github.com/bflattened/bflat/releases/download/v10.0.0-rc.1/bflat-10.0.0-rc.1-linux-glibc-x64.tar.gz -o bflat.tar.gz
-          mkdir -p bflat
-          tar -xzf bflat.tar.gz -C bflat
+          mkdir -p bflat tmp
+          tar -xzf bflat.tar.gz -C tmp
+          mv tmp/bflat-*/* bflat/ || mv tmp/*/* bflat/
+          rm -rf tmp
 
       - name: Add bflat to PATH
         run: |
