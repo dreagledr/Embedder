@@ -1,0 +1,122 @@
+name: Cross-Platform Build with bflat, UPX and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # Срабатывает при создании тега в формате v1.0.0
+  workflow_dispatch: # Позволяет запускать workflow вручную
+    inputs:
+      test_build:
+        description: "Run as test build (wont create release)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  build-all-platforms:
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check_release.outputs.is_release }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if this is a release build
+        id: check_release
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download bflat
+        run: |
+          curl -L https://github.com/bflattened/bflat/releases/download/v10.0.0-rc.1/bflat-10.0.0-rc.1-linux-glibc-x64.tar.gz -o bflat.tar.gz
+          mkdir -p bflat
+          tar -xzf bflat.tar.gz -C bflat
+
+      - name: Add bflat to PATH
+        run: |
+          echo "${{ github.workspace }}/bflat" >> $GITHUB_PATH
+
+      - name: Verify bflat installation
+        run: |
+          ./bflat -v
+
+      - name: Build for Linux
+        run: |
+          ./bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os linux Embedder/src/Program.cs
+          chmod +x embedder
+          tar -czf embedder-linux.tar.gz embedder
+
+      - name: Build for Windows
+        run: |
+          ./bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-message -Os --verbose --separate-symbols --os windows Embedder/src/Program.cs
+          zip embedder-windows.zip embedder.exe
+
+      - name: Install UPX
+        if: steps.check_release.outputs.is_release == 'true' || inputs.test_build == 'true'
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          version: latest
+          files: |
+            embedder
+            embedder.exe
+          args: --brute
+
+      - name: Repackage compressed artifacts
+        if: steps.check_release.outputs.is_release == 'true' || inputs.test_build == 'true'
+        run: |
+          # Пересоздаем архивы с сжатыми бинарниками
+          tar -czf embedder-linux.tar.gz embedder
+          zip -f embedder-windows.zip embedder.exe
+
+      - name: Upload all artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: all-platforms-artifacts
+          path: |
+            embedder-linux.tar.gz
+            embedder-windows.zip
+
+  release:
+    needs: build-all-platforms
+    runs-on: ubuntu-latest
+    if: needs.build-all-platforms.outputs.is_release == 'true'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: all-platforms-artifacts
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## embedder ${{ github.ref_name }}
+
+            Утилита для генерации C# кода с встроенными файлами, собранная с помощью bflat и сжатая с UPX.
+
+            ### Скачайте артефакты:
+            - [embedder-linux.tar.gz](./artifacts/FileEmbedder-linux.tar.gz) - для Linux (нативный бинарник, сжатый UPX)
+            - [embedder-windows.zip](./artifacts/FileEmbedder-windows.zip) - для Windows (нативный .exe, сжатый UPX)
+
+            ### Как использовать
+            ```
+            # Linux
+            tar -xzf embedder-linux.tar.gz
+            ./embedder image.png:ImageData -o Resources.cs
+
+            # Windows
+            unzip embedder-windows.zip
+            embedder.exe image.png:ImageData -o Resources.cs
+            ```
+          files: |
+            artifacts/embedder-linux.tar.gz
+            artifacts/embedder-windows.zip
