@@ -19,7 +19,7 @@ jobs:
       is_release: ${{ steps.check_release.outputs.is_release }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if this is a release build
         id: check_release
@@ -73,7 +73,7 @@ jobs:
           zip -f embedder-windows.zip embedder.exe
 
       - name: Upload all artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: all-platforms-artifacts
           path: |
@@ -86,13 +86,13 @@ jobs:
     if: needs.build-all-platforms.outputs.is_release == 'true'
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
         with:
           name: all-platforms-artifacts
           path: artifacts
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
