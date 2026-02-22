@@ -1,0 +1,34 @@
+on:
+  push:
+    - workflows: [build-and-release]
+      filter:
+        tags: ["v*.*.*"]
+
+workflows:
+  build-and-release:
+    tasks:
+      - name: build-all-platforms
+        cubes:
+          - name: build-pack
+            image: ubuntu:latest
+            script:
+              - apt-get update && apt-get install -y curl tar gzip upx-ucl zip
+              - curl -L https://github.com/bflattened/bflat/releases/download/v10.0.0-rc.1/bflat-10.0.0-rc.1-linux-glibc-x64.tar.gz -o bflat.tar.gz
+              - mkdir -p bflat
+              - tar -xzf bflat.tar.gz -C bflat
+              - chmod +x bflat/bflat
+              - bflat/bflat build -o embedder --no-stacktrace-data --no-globalization --no-exception-messages -Os --verbose --separate-symbols --os linux src/Program.cs
+              - chmod +x embedder
+              - bflat/bflat build -o embedder.exe --no-stacktrace-data --no-globalization --no-exception-messages -Os --verbose --separate-symbols --os windows src/Program.cs
+              - upx --brute embedder
+              - upx --brute embedder.exe
+              - tar -czf embedder-linux.tar.gz embedder
+              - zip embedder-windows.zip embedder.exe
+              - echo "Artifacts packaged successfully"
+              - echo "Release artifacts:"
+              - echo "  - embedder-linux.tar.gz"
+              - echo "  - embedder-windows.zip"
+            artifacts:
+              paths:
+                - embedder-linux.tar.gz
+                - embedder-windows.zip
